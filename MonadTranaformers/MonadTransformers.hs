@@ -5,6 +5,7 @@ import qualified Text.Read
 import Control.Applicative ( Alternative((<|>)) )
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe 
+import Control.Monad.State
 -- Usually MTL (Monad Transformers Library) is imported. It aggregates and exposes several functionalities
 -- using the transformers library behind the scenes.
 -- MaybeT, though, is not exported there and we have to use the "lower level" transformers library
@@ -54,4 +55,25 @@ readAndPrintTwoInts = runMaybeT maybeIO
             int1 <- MaybeT readInt
             lift (print int1)                   -- Same as above. We "lift" the IO to MaybeT with no intermediate Maybe to manage
 
-    
+-- StateT
+incrementAndPrint :: StateT Int IO ()
+incrementAndPrint = do
+    n <- get                                    -- get from State monad
+    lift (print n)                              -- print from IO monad
+    put (n + 1)                                 -- put from State monad
+
+runIncrementAndPrint = do
+    runStateT incrementAndPrint 10              -- we "run" the StateT monad.
+                                                
+-- Multiple transformers
+
+readAndSumTwoInts :: StateT Int (MaybeT IO) Int
+readAndSumTwoInts = do
+    int0 <- lift (MaybeT readInt)
+    lift . lift $ print int0
+    int1 <- lift (MaybeT readInt)
+    lift . lift $ print int1
+    put (int0 + int1)
+    get
+
+runReadAndSumTwoInts s = runMaybeT (runStateT readAndSumTwoInts s) -- we run both monads, providing the initial state for StateT
